@@ -1,14 +1,14 @@
-# CodeSquad Tracker 🏆
+# CodeSquad Tracker ���
 
 **Track LeetCode contest rankings, build your coding squad, and compete with friends!**
 
-CodeSquad Tracker is a Chrome extension that enhances your LeetCode competitive programming experience by allowing you to search for users in contest rankings, manage a squad of friends, and track performance with a leaderboard.
+CodeSquad Tracker is a Chrome extension built with **React + Vite + TypeScript** that enhances your LeetCode competitive programming experience by allowing you to search for users in contest rankings, manage a squad of friends, and track performance with a leaderboard.
 
 ---
 
 ## ✨ Features
 
-### 🔍 **Smart Contest Search**
+### ��� **Smart Contest Search**
 
 -   Search for specific usernames within LeetCode contest rankings
 -   Define custom rank ranges to narrow your search
@@ -16,100 +16,166 @@ CodeSquad Tracker is a Chrome extension that enhances your LeetCode competitive 
 -   Direct links to user profiles
 -   **NEW:** Add found users directly to your squad!
 
-### 👥 **Squad Management**
+### ��� **Squad Management**
 
 -   Build and manage your coding squad
 -   Add friends by username with validation
 -   Quick access to friend profiles
 -   Visual friend list with avatars
 
-### 🏆 **Performance Leaderboard**
+### ��� **Performance Leaderboard**
 
 -   Track total problems solved by difficulty (Easy/Medium/Hard)
 -   See rankings among your squad members
--   Medal system for top performers (🥇🥈🥉)
+-   Medal system for top performers (���������)
 -   Real-time stats via LeetCode's GraphQL API
 
 ---
 
-## 📸 Preview
+## ���️ Tech Stack
 
-![CodeSquad Tracker Demo](Screenshot.png)
+- **React 19** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool & development server
+- **Chrome Extension API** - Browser integration
+- **LeetCode GraphQL API** - Data fetching
 
 ---
 
-## 📥 Installation
+## ��� Project Structure
 
-### From Source
+```
+CodeSquad-CP-DSA-Tracker/
+├── public/
+│   ├── manifest.json       # Chrome extension manifest
+│   ├── popup.html          # Extension popup entry point
+│   └── icon*.png           # Extension icons
+├── src/
+│   ├── components/         # React components
+│   │   ├── Header.tsx
+│   │   ├── TabBar.tsx
+│   │   ├── ErrorBox.tsx
+│   │   ├── SearchTab.tsx
+│   │   └── SquadTab.tsx
+│   ├── popup/              # Popup entry
+│   │   ├── index.tsx       # Main popup app
+│   │   └── popup.css       # Global styles
+│   ├── content/            # Content scripts
+│   │   └── content.ts      # LeetCode page integration
+│   ├── background/         # Background scripts
+│   │   └── background.ts   # Service worker
+│   ├── utils/              # Utilities
+│   │   └── leetcode-api.ts # LeetCode GraphQL API wrapper
+│   └── types/              # TypeScript types
+│       └── index.ts
+├── vite.config.ts          # Vite configuration
+├── tsconfig.json           # TypeScript configuration
+└── package.json            # Dependencies
+```
 
-1. Clone or download this repository:
+---
+
+## ��� Installation
+
+### Development Setup
+
+1. **Clone the repository:**
 
 ```bash
-git clone https://github.com/MUHSIN-M-P/leetcode-rank-search-extension.git
+git clone https://github.com/MUHSIN-M-P/CodeSquad-CP-DSA-Tracker.git
+cd CodeSquad-CP-DSA-Tracker
 ```
 
-Or download the ZIP and extract it.
+2. **Install dependencies:**
 
-### 2. Load into Chrome
+```bash
+npm install
+```
 
-1. Open Chrome and go to: `chrome://extensions`
+3. **Build the extension:**
+
+```bash
+npm run build:extension
+```
+
+The built extension will be in the `dist/` folder.
+
+### Load into Chrome
+
+1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable **Developer Mode** (top right toggle)
 3. Click **Load unpacked**
-4. Select the `leetcode-rank-search-extension/` folder
+4. Select the `dist/` folder
 
 ---
 
-## 🧠 How to Use
+## ��� How to Use
 
-1. Navigate to a LeetCode contest rank page like:
+### Searching for Users
 
-    ```
-    https://leetcode.com/contest/weekly-contest-455/ranking/
-    ```
+1. Navigate to a LeetCode contest ranking page:
+   ```
+   https://leetcode.com/contest/weekly-contest-XXX/ranking/1/
+   ```
 
 2. Click the extension icon in your toolbar
-3. Click **“Start User Search”**
-4. Enter one or more LeetCode usernames (comma-separated)
-   🚨 Do pass UserNames as shown the ranking not UserIds
-5. A floating dialog appears showing progress
-6. When users are found, their page numbers are displayed
+3. Go to **"Search"** tab
+4. Enter usernames (comma-separated)
+   ��� Use usernames as shown in ranking, not UserIds
+5. Set rank range (optional)
+6. Click **"Start Search"**
 
-You can also:
+The extension will:
+- Navigate through pages automatically
+- Use fuzzy matching to find similar usernames
+- Display results with profile links
+- Allow adding found users to your squad
 
--   🔄 Click **Search Again** to rerun
--   🛑 Click **STOP** to cancel mid-search
--   ❌ Click the close button to hide the dialog
+### Managing Your Squad
 
----
-
-> 🚨 **Heads Up!**  
-> If you see the error:
->
-> 🧱 **“Rank page not found”**
->
-> It means the extension couldn’t detect the contest ranking table.
->
-> ✅ **Quick Fix:** Just **reload the contest page** and try again.  
-> This usually happens because LeetCode loads some content dynamically, and a manual refresh helps the script detect the correct elements.
+1. Click the extension icon
+2. Go to **"Squad"** tab
+3. Enter a LeetCode username
+4. Click **"+"** to add to squad
+5. View rankings sorted by total problems solved
 
 ---
 
-## 🧾 File Structure
+## ��� Development
 
-```
-leetcode-rank-search-extension/
-├── manifest.json           # Extension configuration
-├── popup.html     # Main UI with tabs
-├── popup.css      # Professional styling
-├── popup.js       # Squad & leaderboard logic
-├── content.js             # Contest search & page interaction
-├── popup.html             # Legacy popup
-├── popup.js               # Legacy script
-├── background.js          # Service worker
-├── icon16.png             # Toolbar icons
-├── icon48.png
-└── icon128.png
-```
+### Prerequisites
+
+- Node.js (v18 or higher)
+- npm or yarn
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run build:extension` - Build extension and copy manifest
+- `npm run lint` - Run ESLint
+- `npm run preview` - Preview production build
+
+### Development Workflow
+
+1. Make changes to source files in `src/`
+2. Run `npm run dev` to see changes in development mode
+3. Run `npm run build:extension` to create production build
+4. Load/reload the `dist/` folder in Chrome extensions
+
+---
+
+## ��� API Integration
+
+The extension uses LeetCode's GraphQL API to fetch:
+- User profiles and stats
+- Problem-solving statistics (Easy/Medium/Hard)
+- Recent submissions
+- User verification
+
+See `src/utils/leetcode-api.ts` for API implementation.
+
+---
 
 ## ⚠️ Limitations
 
@@ -120,8 +186,30 @@ leetcode-rank-search-extension/
 
 ---
 
-## 🤝 Contributing
+## ��� Contributing
 
 Feel free to submit issues or pull requests to improve CodeSquad Tracker!
 
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test the extension
+5. Submit a pull request
+
 ---
+
+## ��� License
+
+MIT
+
+---
+
+## ��� Author
+
+**MUHSIN-M-P**
+
+---
+
+## ��� Version
+
+2.0.0 - React + Vite Edition
