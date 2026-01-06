@@ -16,6 +16,8 @@ export interface UserStats {
     country?: string; // Codeforces specific
     solvedToday?: boolean; // Whether user solved any problem today
     todayCount?: number; // Number of problems solved today
+    cachedAt?: number; // Timestamp when data was cached
+    lastFetched?: number; // Timestamp of last successful fetch
 }
 
 export interface FoundUser {

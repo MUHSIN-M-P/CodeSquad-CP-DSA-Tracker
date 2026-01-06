@@ -25,40 +25,79 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
 
     const loadSquadRankings = async () => {
         setLoading(true);
-        chrome.storage.local.get({ friends: [] }, async (result) => {
-            let friendsList: Friend[] = result.friends;
+        chrome.storage.local.get(
+            { friends: [], userStatsCache: {} },
+            async (result) => {
+                let friendsList: Friend[] = result.friends;
+                let cache: Record<string, UserStats> =
+                    result.userStatsCache || {};
 
-            // Migrate old format to new format if needed
-            if (friendsList.length > 0 && typeof friendsList[0] === "string") {
-                friendsList = friendsList.map((f: any) => ({
-                    username: f,
-                    platform: "leetcode" as Platform,
-                }));
-                chrome.storage.local.set({ friends: friendsList });
-            }
+                // Migrate old format to new format if needed
+                if (
+                    friendsList.length > 0 &&
+                    typeof friendsList[0] === "string"
+                ) {
+                    friendsList = friendsList.map((f: any) => ({
+                        username: f,
+                        platform: "leetcode" as Platform,
+                    }));
+                    chrome.storage.local.set({ friends: friendsList });
+                }
 
-            setFriends(friendsList);
+                setFriends(friendsList);
 
-            if (friendsList.length === 0) {
-                setSquadStats([]);
+                if (friendsList.length === 0) {
+                    setSquadStats([]);
+                    setLoading(false);
+                    return;
+                }
+
+                const now = Date.now();
+                const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+                const statsPromises = friendsList.map(
+                    async (friend: Friend) => {
+                        const cacheKey = `${friend.username}-${friend.platform}`;
+                        const cachedData = cache[cacheKey];
+
+                        // Use cache if fresh and data hasn't changed
+                        if (
+                            cachedData &&
+                            cachedData.cachedAt &&
+                            now - cachedData.cachedAt < CACHE_DURATION
+                        ) {
+                            return cachedData;
+                        }
+
+                        // Fetch fresh data
+                        const freshData =
+                            friend.platform === "leetcode"
+                                ? await getUserStats(friend.username)
+                                : await getCodeforcesUserStats(friend.username);
+
+                        if (freshData) {
+                            freshData.cachedAt = now;
+                            freshData.lastFetched = now;
+                            cache[cacheKey] = freshData;
+                        }
+
+                        return freshData;
+                    }
+                );
+
+                const allStats = await Promise.all(statsPromises);
+
+                const validStats = allStats
+                    .filter((stat): stat is UserStats => stat !== null)
+                    .sort((a, b) => b.total - a.total);
+
+                // Save updated cache
+                chrome.storage.local.set({ userStatsCache: cache });
+
+                setSquadStats(validStats);
                 setLoading(false);
-                return;
             }
-
-            const statsPromises = friendsList.map((friend: Friend) =>
-                friend.platform === "leetcode"
-                    ? getUserStats(friend.username)
-                    : getCodeforcesUserStats(friend.username)
-            );
-            const allStats = await Promise.all(statsPromises);
-
-            const validStats = allStats
-                .filter((stat): stat is UserStats => stat !== null)
-                .sort((a, b) => b.total - a.total);
-
-            setSquadStats(validStats);
-            setLoading(false);
-        });
+        );
     };
 
     const handleAddFriend = async () => {
@@ -300,25 +339,71 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
                     marginBottom: "12px",
                     display: "flex",
                     alignItems: "center",
+                    justifyContent: "space-between",
                 }}
             >
-                Squad Rankings
-                <span
+                <div style={{ display: "flex", alignItems: "center" }}>
+                    Squad Rankings
+                    <span
+                        style={{
+                            background: "var(--primary)",
+                            color: "#000",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            padding: "4px 10px",
+                            borderRadius: "16px",
+                            marginLeft: "8px",
+                        }}
+                    >
+                        {friends.length}
+                    </span>
+                </div>
+                <button
+                    onClick={loadSquadRankings}
+                    disabled={loading}
                     style={{
                         background: "var(--primary)",
                         color: "#000",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        padding: "4px 10px",
-                        borderRadius: "16px",
-                        marginLeft: "8px",
+                        border: "none",
+                        borderRadius: "var(--radius-sm)",
+                        padding: "6px 12px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        cursor: loading ? "not-allowed" : "pointer",
+                        opacity: loading ? 0.6 : 1,
+                        transition: "all 0.2s",
                     }}
+                    title="Refresh rankings"
                 >
-                    {friends.length}
-                </span>
+                    {loading ? "⟳" : "↻"}
+                </button>
             </h3>
 
-            <div style={{ maxHeight: "350px", overflowY: "auto" }}>
+            <div
+                style={{
+                    maxHeight: "600px",
+                    overflowY: "auto",
+                    paddingRight: "4px",
+                }}
+                className="squad-list-container"
+            >
+                <style>{`
+                    .squad-list-container::-webkit-scrollbar {
+                        width: 8px;
+                    }
+                    .squad-list-container::-webkit-scrollbar-track {
+                        background: var(--bg-secondary);
+                        border-radius: 4px;
+                    }
+                    .squad-list-container::-webkit-scrollbar-thumb {
+                        background: var(--border);
+                        border-radius: 4px;
+                        transition: background 0.2s;
+                    }
+                    .squad-list-container::-webkit-scrollbar-thumb:hover {
+                        background: var(--primary);
+                    }
+                `}</style>
                 {loading && (
                     <div
                         style={{
@@ -438,7 +523,28 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
                                             gap: "6px",
                                         }}
                                     >
-                                        {user.username}
+                                        <span
+                                            onClick={() =>
+                                                handleViewProfile(
+                                                    user.username,
+                                                    user.platform
+                                                )
+                                            }
+                                            style={{
+                                                cursor: "pointer",
+                                                transition: "color 0.2s",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.color =
+                                                    "var(--primary)";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.color =
+                                                    "var(--text)";
+                                            }}
+                                        >
+                                            {user.username}
+                                        </span>
                                         <span
                                             style={{
                                                 background:
@@ -468,51 +574,42 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
                                             gap: "8px",
                                         }}
                                     >
-                                        <span
-                                            style={{
-                                                display: "inline-flex",
-                                                alignItems: "center",
-                                                gap: "4px",
-                                                padding: "2px 8px",
-                                                borderRadius: "12px",
-                                                fontSize: "11px",
-                                                fontWeight: 600,
-                                                background: user.solvedToday
-                                                    ? "rgba(44, 187, 93, 0.15)"
-                                                    : "rgba(128, 128, 128, 0.15)",
-                                                color: user.solvedToday
-                                                    ? "#2CBB5D"
-                                                    : "var(--text-secondary)",
-                                            }}
-                                        >
-                                            {user.solvedToday ? (
-                                                <>
-                                                    ✓ Active today
-                                                    {user.todayCount &&
-                                                        user.todayCount > 1 && (
-                                                            <span
-                                                                style={{
-                                                                    background:
-                                                                        "#2CBB5D",
-                                                                    color: "white",
-                                                                    padding:
-                                                                        "1px 5px",
-                                                                    borderRadius:
-                                                                        "8px",
-                                                                    fontSize:
-                                                                        "10px",
-                                                                }}
-                                                            >
-                                                                {
-                                                                    user.todayCount
-                                                                }
-                                                            </span>
-                                                        )}
-                                                </>
-                                            ) : (
-                                                "○ No activity today"
-                                            )}
-                                        </span>
+                                        {user.solvedToday && (
+                                            <span
+                                                style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "4px",
+                                                    padding: "2px 8px",
+                                                    borderRadius: "12px",
+                                                    fontSize: "11px",
+                                                    fontWeight: 600,
+                                                    background:
+                                                        "rgba(44, 187, 93, 0.15)",
+                                                    color: "#2CBB5D",
+                                                }}
+                                            >
+                                                ✓ Active today
+                                                {user.todayCount &&
+                                                    user.todayCount > 1 && (
+                                                        <span
+                                                            style={{
+                                                                background:
+                                                                    "#2CBB5D",
+                                                                color: "white",
+                                                                padding:
+                                                                    "1px 5px",
+                                                                borderRadius:
+                                                                    "8px",
+                                                                fontSize:
+                                                                    "10px",
+                                                            }}
+                                                        >
+                                                            {user.todayCount}
+                                                        </span>
+                                                    )}
+                                            </span>
+                                        )}
                                         {user.platform === "codeforces" &&
                                             user.rating && (
                                                 <span
@@ -538,56 +635,28 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
                                 >
                                     {user.total}
                                 </div>
-                                <div
+                                <button
+                                    onClick={() =>
+                                        handleRemoveFriend(
+                                            user.username,
+                                            user.platform
+                                        )
+                                    }
                                     style={{
-                                        display: "flex",
-                                        gap: "6px",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        padding: "8px",
+                                        borderRadius: "var(--radius-sm)",
+                                        fontSize: "16px",
+                                        color: "var(--error)",
+                                        transition: "all 0.2s",
                                         marginLeft: "12px",
                                     }}
+                                    title="Remove"
                                 >
-                                    <button
-                                        onClick={() =>
-                                            handleViewProfile(
-                                                user.username,
-                                                user.platform
-                                            )
-                                        }
-                                        style={{
-                                            background: "none",
-                                            border: "none",
-                                            cursor: "pointer",
-                                            padding: "8px",
-                                            borderRadius: "var(--radius-sm)",
-                                            fontSize: "16px",
-                                            color: "var(--primary)",
-                                            transition: "all 0.2s",
-                                        }}
-                                        title="View Profile"
-                                    >
-                                        🔗
-                                    </button>
-                                    <button
-                                        onClick={() =>
-                                            handleRemoveFriend(
-                                                user.username,
-                                                user.platform
-                                            )
-                                        }
-                                        style={{
-                                            background: "none",
-                                            border: "none",
-                                            cursor: "pointer",
-                                            padding: "8px",
-                                            borderRadius: "var(--radius-sm)",
-                                            fontSize: "16px",
-                                            color: "var(--error)",
-                                            transition: "all 0.2s",
-                                        }}
-                                        title="Remove"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
+                                    ✕
+                                </button>
                             </div>
                         );
                     })}

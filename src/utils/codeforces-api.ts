@@ -7,12 +7,60 @@ import type {
 
 const CF_API_ENDPOINT = "https://codeforces.com/api";
 
+// Helper function to safely parse JSON response
+async function safeJsonParse(response: Response) {
+    const text = await response.text();
+    try {
+        return JSON.parse(text);
+    } catch (error) {
+        // Check if it's an HTML error response (rate limiting)
+        if (text.includes("<html>") || text.includes("<!DOCTYPE")) {
+            throw new Error("RATE_LIMIT");
+        }
+        console.error(
+            "Failed to parse JSON. Response:",
+            text.substring(0, 200)
+        );
+        throw new Error(
+            "Codeforces API returned invalid response. Please try again later."
+        );
+    }
+}
+
+// Add delay between requests to avoid rate limiting
+function delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Retry with exponential backoff
+async function fetchWithRetry(
+    url: string,
+    maxRetries: number = 3
+): Promise<Response> {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            await delay(Math.pow(2, i) * 1000); // 1s, 2s, 4s
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response;
+        } catch (error) {
+            if (i === maxRetries - 1) throw error;
+            console.log(`Retry ${i + 1}/${maxRetries} for ${url}`);
+        }
+    }
+    throw new Error("Max retries exceeded");
+}
+
 export async function verifyCodeforcesUser(handle: string): Promise<boolean> {
     try {
-        const response = await fetch(
-            `${CF_API_ENDPOINT}/user.info?handles=${handle}`
+        const response = await fetchWithRetry(
+            `${CF_API_ENDPOINT}/user.info?handles=${handle}`,
+            2
         );
-        const result = await response.json();
+
+        const result = await safeJsonParse(response);
         return result.status === "OK" && result.result.length > 0;
     } catch (error) {
         console.error("Error verifying Codeforces user:", error);
@@ -24,15 +72,18 @@ export async function getCodeforcesUserStats(
     handle: string
 ): Promise<UserStats | null> {
     try {
-        const [userResponse, submissionsResponse] = await Promise.all([
-            fetch(`${CF_API_ENDPOINT}/user.info?handles=${handle}`),
-            fetch(
-                `${CF_API_ENDPOINT}/user.status?handle=${handle}&from=1&count=10000`
-            ),
-        ]);
+        // Fetch sequentially to avoid rate limiting
+        const userResponse = await fetchWithRetry(
+            `${CF_API_ENDPOINT}/user.info?handles=${handle}`
+        );
+        const userData = await safeJsonParse(userResponse);
 
-        const userData = await userResponse.json();
-        const submissionsData = await submissionsResponse.json();
+        await delay(1000); // Wait between requests
+
+        const submissionsResponse = await fetchWithRetry(
+            `${CF_API_ENDPOINT}/user.status?handle=${handle}&from=1&count=10000`
+        );
+        const submissionsData = await safeJsonParse(submissionsResponse);
 
         if (userData.status !== "OK" || userData.result.length === 0) {
             return null;
@@ -89,10 +140,11 @@ export async function getCodeforcesRecentSubmissions(
     count: number = 20
 ): Promise<Submission[]> {
     try {
-        const response = await fetch(
+        const response = await fetchWithRetry(
             `${CF_API_ENDPOINT}/user.status?handle=${handle}&from=1&count=${count}`
         );
-        const result = await response.json();
+
+        const result = await safeJsonParse(response);
 
         if (result.status !== "OK") {
             return [];
@@ -117,10 +169,17 @@ export async function getCodeforcesUserRating(
     handle: string
 ): Promise<number | null> {
     try {
+        await delay(500); // Add delay to avoid rate limiting
+
         const response = await fetch(
             `${CF_API_ENDPOINT}/user.info?handles=${handle}`
         );
-        const result = await response.json();
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const result = await safeJsonParse(response);
 
         if (result.status === "OK" && result.result.length > 0) {
             return result.result[0].rating || 0;
