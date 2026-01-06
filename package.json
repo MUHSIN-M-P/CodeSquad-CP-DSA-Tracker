@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build:extension": "tsc -b && vite build && npm run copy-manifest && npm run fix-popup && npm run fix-paths",
+    "build": "tsc -b && vite build && node scripts/fix-paths.js",
+    "build:extension": "npm run build",
     "copy-manifest": "cp public/manifest.json dist/",
     "fix-popup": "mv dist/public/popup.html dist/popup.html && rm -rf dist/public",
-    "fix-paths": "sed -i 's|src=\"../assets/|src=\"./assets/|g' dist/popup.html && sed -i 's|href=\"../assets/|href=\"./assets/|g' dist/popup.html",
+    "fix-paths": "node scripts/fix-paths.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

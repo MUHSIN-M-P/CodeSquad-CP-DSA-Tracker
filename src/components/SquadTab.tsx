@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { getUserStats, verifyLeetCodeUser } from "../utils/leetcode-api";
-import type { UserStats } from "../types";
+import {
+    getCodeforcesUserStats,
+    verifyCodeforcesUser,
+    getCodeforcesRankColor,
+} from "../utils/codeforces-api";
+import type { UserStats, Platform, Friend } from "../types";
 
 interface SquadTabProps {
     showError: (msg: string) => void;
@@ -8,7 +13,9 @@ interface SquadTabProps {
 
 const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
     const [friendUsername, setFriendUsername] = useState("");
-    const [friends, setFriends] = useState<string[]>([]);
+    const [selectedPlatform, setSelectedPlatform] =
+        useState<Platform>("leetcode");
+    const [friends, setFriends] = useState<Friend[]>([]);
     const [squadStats, setSquadStats] = useState<UserStats[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -19,7 +26,17 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
     const loadSquadRankings = async () => {
         setLoading(true);
         chrome.storage.local.get({ friends: [] }, async (result) => {
-            const friendsList = result.friends;
+            let friendsList: Friend[] = result.friends;
+
+            // Migrate old format to new format if needed
+            if (friendsList.length > 0 && typeof friendsList[0] === "string") {
+                friendsList = friendsList.map((f: any) => ({
+                    username: f,
+                    platform: "leetcode" as Platform,
+                }));
+                chrome.storage.local.set({ friends: friendsList });
+            }
+
             setFriends(friendsList);
 
             if (friendsList.length === 0) {
@@ -28,8 +45,10 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
                 return;
             }
 
-            const statsPromises = friendsList.map((friend: string) =>
-                getUserStats(friend)
+            const statsPromises = friendsList.map((friend: Friend) =>
+                friend.platform === "leetcode"
+                    ? getUserStats(friend.username)
+                    : getCodeforcesUserStats(friend.username)
             );
             const allStats = await Promise.all(statsPromises);
 
@@ -50,22 +69,45 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
             return;
         }
 
-        const isValid = await verifyLeetCodeUser(username);
+        const isValid =
+            selectedPlatform === "leetcode"
+                ? await verifyLeetCodeUser(username)
+                : await verifyCodeforcesUser(username);
 
         if (!isValid) {
-            showError(`User "${username}" not found on LeetCode`);
+            showError(
+                `User "${username}" not found on ${
+                    selectedPlatform === "leetcode" ? "LeetCode" : "Codeforces"
+                }`
+            );
             return;
         }
 
         chrome.storage.local.get({ friends: [] }, (result) => {
-            const friendsList = result.friends;
+            let friendsList: Friend[] = result.friends;
 
-            if (friendsList.includes(username)) {
-                showError(`${username} is already in your squad`);
+            // Migrate old format if needed
+            if (friendsList.length > 0 && typeof friendsList[0] === "string") {
+                friendsList = friendsList.map((f: any) => ({
+                    username: f,
+                    platform: "leetcode" as Platform,
+                }));
+            }
+
+            if (
+                friendsList.some(
+                    (f) =>
+                        f.username === username &&
+                        f.platform === selectedPlatform
+                )
+            ) {
+                showError(
+                    `${username} (${selectedPlatform}) is already in your squad`
+                );
                 return;
             }
 
-            friendsList.push(username);
+            friendsList.push({ username, platform: selectedPlatform });
             chrome.storage.local.set({ friends: friendsList }, () => {
                 setFriendUsername("");
                 loadSquadRankings();
@@ -74,14 +116,15 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
         });
     };
 
-    const handleRemoveFriend = (username: string) => {
-        if (!confirm(`Remove ${username} from your squad?`)) {
+    const handleRemoveFriend = (username: string, platform: Platform) => {
+        if (!confirm(`Remove ${username} (${platform}) from your squad?`)) {
             return;
         }
 
         chrome.storage.local.get({ friends: [] }, (result) => {
-            const friendsList = result.friends.filter(
-                (f: string) => f !== username
+            const friendsList: Friend[] = result.friends.filter(
+                (f: Friend) =>
+                    !(f.username === username && f.platform === platform)
             );
             chrome.storage.local.set({ friends: friendsList }, () => {
                 loadSquadRankings();
@@ -89,8 +132,11 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
         });
     };
 
-    const handleViewProfile = (username: string) => {
-        const url = `https://leetcode.com/u/${username}/`;
+    const handleViewProfile = (username: string, platform: Platform) => {
+        const url =
+            platform === "leetcode"
+                ? `https://leetcode.com/u/${username}/`
+                : `https://codeforces.com/profile/${username}`;
         chrome.tabs.create({ url });
     };
 
@@ -133,6 +179,69 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
                 >
                     Add Squad Member
                 </label>
+
+                {/* Platform Selector */}
+                <div
+                    style={{
+                        display: "flex",
+                        gap: "8px",
+                        marginBottom: "10px",
+                    }}
+                >
+                    <button
+                        onClick={() => setSelectedPlatform("leetcode")}
+                        style={{
+                            flex: 1,
+                            padding: "8px",
+                            background:
+                                selectedPlatform === "leetcode"
+                                    ? "var(--primary)"
+                                    : "var(--bg-secondary)",
+                            color:
+                                selectedPlatform === "leetcode"
+                                    ? "#000"
+                                    : "var(--text)",
+                            border: `1.5px solid ${
+                                selectedPlatform === "leetcode"
+                                    ? "var(--primary)"
+                                    : "var(--border)"
+                            }`,
+                            borderRadius: "var(--radius)",
+                            cursor: "pointer",
+                            fontWeight: 600,
+                            fontSize: "13px",
+                        }}
+                    >
+                        LeetCode
+                    </button>
+                    <button
+                        onClick={() => setSelectedPlatform("codeforces")}
+                        style={{
+                            flex: 1,
+                            padding: "8px",
+                            background:
+                                selectedPlatform === "codeforces"
+                                    ? "var(--primary)"
+                                    : "var(--bg-secondary)",
+                            color:
+                                selectedPlatform === "codeforces"
+                                    ? "#000"
+                                    : "var(--text)",
+                            border: `1.5px solid ${
+                                selectedPlatform === "codeforces"
+                                    ? "var(--primary)"
+                                    : "var(--border)"
+                            }`,
+                            borderRadius: "var(--radius)",
+                            cursor: "pointer",
+                            fontWeight: 600,
+                            fontSize: "13px",
+                        }}
+                    >
+                        Codeforces
+                    </button>
+                </div>
+
                 <div style={{ display: "flex", gap: "10px" }}>
                     <input
                         type="text"
@@ -141,7 +250,11 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
                         onKeyPress={(e) =>
                             e.key === "Enter" && handleAddFriend()
                         }
-                        placeholder="LeetCode username"
+                        placeholder={`${
+                            selectedPlatform === "leetcode"
+                                ? "LeetCode"
+                                : "Codeforces"
+                        } username`}
                         style={{
                             flex: 1,
                             padding: "12px 14px",
@@ -168,6 +281,16 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
                         +
                     </button>
                 </div>
+                <small
+                    style={{
+                        display: "block",
+                        fontSize: "12px",
+                        color: "var(--text-secondary)",
+                        marginTop: "6px",
+                    }}
+                >
+                    Select platform and add friends to track their progress
+                </small>
             </div>
 
             {/* Squad Rankings */}
@@ -248,7 +371,7 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
 
                         return (
                             <div
-                                key={user.username}
+                                key={`${user.username}-${user.platform}`}
                                 style={{
                                     display: "flex",
                                     alignItems: "center",
@@ -310,28 +433,99 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
                                         style={{
                                             fontWeight: 600,
                                             fontSize: "14px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "6px",
                                         }}
                                     >
                                         {user.username}
+                                        <span
+                                            style={{
+                                                background:
+                                                    user.platform === "leetcode"
+                                                        ? "#FFA116"
+                                                        : "#1F8ACB",
+                                                color: "white",
+                                                fontSize: "9px",
+                                                fontWeight: 700,
+                                                padding: "2px 6px",
+                                                borderRadius: "4px",
+                                                textTransform: "uppercase",
+                                            }}
+                                        >
+                                            {user.platform === "leetcode"
+                                                ? "LC"
+                                                : "CF"}
+                                        </span>
                                     </div>
                                     <div
                                         style={{
                                             fontSize: "12px",
                                             color: "var(--text-secondary)",
                                             marginTop: "2px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "8px",
                                         }}
                                     >
-                                        <span style={{ color: "#2CBB5D" }}>
-                                            {user.easy}E
-                                        </span>{" "}
-                                        ·{" "}
-                                        <span style={{ color: "#FFA116" }}>
-                                            {user.medium}M
-                                        </span>{" "}
-                                        ·{" "}
-                                        <span style={{ color: "#EF4743" }}>
-                                            {user.hard}H
+                                        <span
+                                            style={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "4px",
+                                                padding: "2px 8px",
+                                                borderRadius: "12px",
+                                                fontSize: "11px",
+                                                fontWeight: 600,
+                                                background: user.solvedToday
+                                                    ? "rgba(44, 187, 93, 0.15)"
+                                                    : "rgba(128, 128, 128, 0.15)",
+                                                color: user.solvedToday
+                                                    ? "#2CBB5D"
+                                                    : "var(--text-secondary)",
+                                            }}
+                                        >
+                                            {user.solvedToday ? (
+                                                <>
+                                                    ✓ Active today
+                                                    {user.todayCount &&
+                                                        user.todayCount > 1 && (
+                                                            <span
+                                                                style={{
+                                                                    background:
+                                                                        "#2CBB5D",
+                                                                    color: "white",
+                                                                    padding:
+                                                                        "1px 5px",
+                                                                    borderRadius:
+                                                                        "8px",
+                                                                    fontSize:
+                                                                        "10px",
+                                                                }}
+                                                            >
+                                                                {
+                                                                    user.todayCount
+                                                                }
+                                                            </span>
+                                                        )}
+                                                </>
+                                            ) : (
+                                                "○ No activity today"
+                                            )}
                                         </span>
+                                        {user.platform === "codeforces" &&
+                                            user.rating && (
+                                                <span
+                                                    style={{
+                                                        color: getCodeforcesRankColor(
+                                                            user.rating
+                                                        ),
+                                                        fontSize: "11px",
+                                                    }}
+                                                >
+                                                    {user.rating}
+                                                </span>
+                                            )}
                                     </div>
                                 </div>
                                 <div
@@ -353,7 +547,10 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
                                 >
                                     <button
                                         onClick={() =>
-                                            handleViewProfile(user.username)
+                                            handleViewProfile(
+                                                user.username,
+                                                user.platform
+                                            )
                                         }
                                         style={{
                                             background: "none",
@@ -371,7 +568,10 @@ const SquadTab: React.FC<SquadTabProps> = ({ showError }) => {
                                     </button>
                                     <button
                                         onClick={() =>
-                                            handleRemoveFriend(user.username)
+                                            handleRemoveFriend(
+                                                user.username,
+                                                user.platform
+                                            )
                                         }
                                         style={{
                                             background: "none",

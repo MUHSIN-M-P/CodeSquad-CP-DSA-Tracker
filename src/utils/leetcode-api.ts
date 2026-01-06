@@ -78,6 +78,18 @@ export async function getUserStats(
         const acStats = userData.submitStats.acSubmissionNum;
         const total = acStats.find((s) => s.difficulty === "All")?.count || 0;
 
+        // Check if user solved any problem today
+        const recentSubmissions = await getRecentSubmissions(username, 20);
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayTimestamp = Math.floor(todayStart.getTime() / 1000);
+
+        const todaySubmissions = recentSubmissions.filter(
+            (sub) => sub.timestamp >= todayTimestamp
+        );
+        const solvedToday = todaySubmissions.length > 0;
+        const todayCount = todaySubmissions.length;
+
         return {
             username: userData.username,
             avatar: userData.profile.userAvatar,
@@ -86,6 +98,9 @@ export async function getUserStats(
             easy: acStats.find((s) => s.difficulty === "Easy")?.count || 0,
             medium: acStats.find((s) => s.difficulty === "Medium")?.count || 0,
             hard: acStats.find((s) => s.difficulty === "Hard")?.count || 0,
+            platform: "leetcode" as const,
+            solvedToday,
+            todayCount,
         };
     } catch (error) {
         console.error("Error fetching user stats:", error);

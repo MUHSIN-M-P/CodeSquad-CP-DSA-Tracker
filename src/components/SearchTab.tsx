@@ -36,15 +36,39 @@ const SearchTab: React.FC<SearchTabProps> = ({ showError, clearError }) => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const currentTab = tabs[0];
 
-            if (
-                !currentTab.url ||
-                !currentTab.url.includes("leetcode.com/contest/") ||
-                !currentTab.url.includes("/ranking/")
-            ) {
+            // Detect platform from current tab URL
+            const isLeetCode = currentTab.url?.includes("leetcode.com");
+            const isCodeforces = currentTab.url?.includes("codeforces.com");
+
+            if (!isLeetCode && !isCodeforces) {
                 showError(
-                    "Please open a LeetCode contest ranking page first.\\nExample: https://leetcode.com/contest/weekly-contest-XXX/ranking/1/"
+                    "Please open a LeetCode or Codeforces contest page first.\n\nLeetCode: https://leetcode.com/contest/weekly-contest-XXX/ranking/1/\nCodeforces: https://codeforces.com/contest/1234/standings"
                 );
                 return;
+            }
+
+            if (isLeetCode) {
+                if (
+                    !currentTab.url ||
+                    !currentTab.url.includes("/contest/") ||
+                    !currentTab.url.includes("/ranking/")
+                ) {
+                    showError(
+                        "Please open a LeetCode contest ranking page first.\nExample: https://leetcode.com/contest/weekly-contest-XXX/ranking/1/"
+                    );
+                    return;
+                }
+            } else if (isCodeforces) {
+                if (
+                    !currentTab.url ||
+                    !currentTab.url.includes("/contest/") ||
+                    !currentTab.url.includes("/standings")
+                ) {
+                    showError(
+                        "Please open a Codeforces contest standings page first.\nExample: https://codeforces.com/contest/1234/standings"
+                    );
+                    return;
+                }
             }
 
             const message: SearchRequest = {
@@ -63,7 +87,7 @@ const SearchTab: React.FC<SearchTabProps> = ({ showError, clearError }) => {
                 (response: SearchResponse) => {
                     if (chrome.runtime.lastError) {
                         showError(
-                            "Cannot connect to page. Please refresh the contest ranking page and try again."
+                            "Cannot connect to page. Please refresh the contest page and try again."
                         );
                         return;
                     }
@@ -71,14 +95,19 @@ const SearchTab: React.FC<SearchTabProps> = ({ showError, clearError }) => {
                     if (response && response.status === "started") {
                         window.close();
                     } else if (response && response.status === "error") {
+                        const platform = isLeetCode ? "LeetCode" : "Codeforces";
                         if (
-                            response.message === "Not on a contest ranking page"
+                            response.message &&
+                            response.message.includes("Not on a")
                         ) {
                             showError(
-                                "Please open a LeetCode contest ranking page first."
+                                `Please open a ${platform} contest page first.`
                             );
                         } else {
-                            showError("Error: " + response.message);
+                            showError(
+                                "Error: " +
+                                    (response.message || "Unknown error")
+                            );
                         }
                     } else {
                         showError(
@@ -92,6 +121,30 @@ const SearchTab: React.FC<SearchTabProps> = ({ showError, clearError }) => {
 
     return (
         <div>
+            <div
+                style={{
+                    marginBottom: "16px",
+                    padding: "12px",
+                    background: "var(--bg-secondary)",
+                    borderRadius: "var(--radius)",
+                    border: "1px solid var(--border)",
+                }}
+            >
+                <div
+                    style={{
+                        fontSize: "13px",
+                        color: "var(--text-secondary)",
+                        lineHeight: "1.5",
+                    }}
+                >
+                    💡 Open a contest page first:
+                    <div style={{ marginTop: "6px", fontSize: "12px" }}>
+                        <strong>LeetCode:</strong> /contest/weekly-XXX/ranking/
+                        <br />
+                        <strong>Codeforces:</strong> /contest/1234/standings
+                    </div>
+                </div>
+            </div>
             <div style={{ marginBottom: "20px" }}>
                 <label
                     style={{

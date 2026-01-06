@@ -1,13 +1,21 @@
 // Chrome Extension API Types
 
+export type Platform = "leetcode" | "codeforces";
+
 export interface UserStats {
     username: string;
+    platform: Platform;
     avatar?: string;
     ranking?: number;
+    rating?: number; // For Codeforces
     total: number;
-    easy: number;
-    medium: number;
-    hard: number;
+    easy?: number; // LeetCode specific
+    medium?: number; // LeetCode specific
+    hard?: number; // LeetCode specific
+    maxRating?: number; // Codeforces specific
+    country?: string; // Codeforces specific
+    solvedToday?: boolean; // Whether user solved any problem today
+    todayCount?: number; // Number of problems solved today
 }
 
 export interface FoundUser {
@@ -52,6 +60,7 @@ export interface Submission {
 
 export interface DailyStats {
     username: string;
+    platform: Platform;
     count: number;
     submissions: Submission[];
 }
@@ -79,4 +88,38 @@ export interface GraphQLSubmissionsResponse {
         titleSlug: string;
         timestamp: number;
     }[];
+}
+
+// Codeforces API Types
+export interface CodeforcesUser {
+    handle: string;
+    rating?: number;
+    maxRating?: number;
+    rank?: string;
+    maxRank?: string;
+    avatar: string;
+    titlePhoto: string;
+    country?: string;
+}
+
+export interface CodeforcesSubmission {
+    id: number;
+    contestId: number;
+    creationTimeSeconds: number;
+    problem: {
+        contestId: number;
+        index: string;
+        name: string;
+        rating?: number;
+    };
+    verdict: string;
+}
+
+export interface CodeforcesUserStatus {
+    result: CodeforcesSubmission[];
+}
+
+export interface Friend {
+    username: string;
+    platform: Platform;
 }

@@ -1,10 +1,12 @@
-// Content script for LeetCode contest ranking pages
+// Content script for LeetCode and Codeforces contest ranking pages
 /// <reference types="chrome"/>
 import type {
     SearchRequest,
     SearchResponse,
     FoundUser,
     SearchState,
+    Friend,
+    Platform,
 } from "../types";
 
 (() => {
@@ -15,13 +17,38 @@ import type {
     // SQUAD MANAGEMENT - Add found users to friends
     // =============================================================================
 
+    // Detect platform from URL
+    function detectPlatform(): Platform {
+        if (window.location.hostname.includes("leetcode.com")) {
+            return "leetcode";
+        } else if (window.location.hostname.includes("codeforces.com")) {
+            return "codeforces";
+        }
+        return "leetcode"; // default
+    }
+
     function addToSquad(username: string, buttonElement: HTMLButtonElement) {
+        const platform = detectPlatform();
+
         chrome.storage.local.get(
             { friends: [] },
-            (result: { friends: string[] }) => {
-                const friends = result.friends;
+            (result: { friends: Friend[] | string[] }) => {
+                let friends: Friend[] = result.friends as Friend[];
 
-                if (friends.includes(username)) {
+                // Migrate old format if needed
+                if (friends.length > 0 && typeof friends[0] === "string") {
+                    friends = (friends as unknown as string[]).map((f) => ({
+                        username: f,
+                        platform: "leetcode" as Platform,
+                    }));
+                }
+
+                if (
+                    friends.some(
+                        (f) =>
+                            f.username === username && f.platform === platform
+                    )
+                ) {
                     buttonElement.textContent = "✓ In Squad";
                     buttonElement.style.background = "#6c757d";
                     buttonElement.disabled = true;
@@ -32,13 +59,13 @@ import type {
                     return;
                 }
 
-                friends.push(username);
+                friends.push({ username, platform });
                 chrome.storage.local.set({ friends }, () => {
                     buttonElement.textContent = "✓ Added!";
                     buttonElement.style.background = "#25a351";
                     buttonElement.disabled = true;
 
-                    console.log(`Added ${username} to squad`);
+                    console.log(`Added ${username} (${platform}) to squad`);
                 });
             }
         );
@@ -757,6 +784,190 @@ import type {
         }
     }
 
+    // =============================================================================
+    // CODEFORCES CONTEST SEARCH
+    // =============================================================================
+
+    async function findUsersInCodeforcesContest(
+        opts: Partial<SearchRequest> = {}
+    ) {
+        if (
+            !window.location.href.includes("/contest/") ||
+            !window.location.href.includes("/standings")
+        ) {
+            alert(
+                "❌ Please open a Codeforces contest standings page first!\nExample: https://codeforces.com/contest/1234/standings"
+            );
+            return;
+        }
+
+        const userNamesToSearch: string[] = opts.usernames
+            ? opts.usernames
+                  .split(/[\n,]+/)
+                  .map((name) => name.trim().toLowerCase())
+                  .filter((name) => name.length > 0)
+            : [];
+
+        if (userNamesToSearch.length === 0) {
+            alert("❌ No usernames provided to search");
+            return;
+        }
+
+        const foundUsers: Record<string, FoundUser> = {};
+        let foundCount = 0;
+
+        // Create search UI
+        const searchPanel = document.createElement("div");
+        searchPanel.id = "cf-search-panel";
+        searchPanel.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 320px;
+            background: white;
+            border: 2px solid #1a73e8;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            z-index: 10000;
+            font-family: -apple-system, system-ui, sans-serif;
+        `;
+
+        searchPanel.innerHTML = `
+            <div style="font-weight: 700; font-size: 16px; margin-bottom: 12px; color: #333;">
+                🔍 Searching Users
+            </div>
+            <div id="cf-search-status" style="font-size: 13px; color: #555; margin-bottom: 12px;">
+                Initializing...
+            </div>
+            <div id="cf-found-users" style="max-height: 300px; overflow-y: auto;"></div>
+        `;
+        document.body.appendChild(searchPanel);
+
+        const statusEl = document.getElementById("cf-search-status")!;
+        const foundUsersEl = document.getElementById("cf-found-users")!;
+
+        statusEl.textContent = "Scanning standings table...";
+
+        try {
+            // Get all rows from the standings table
+            const standingsTable = document.querySelector(".standings")!;
+            const rows = Array.from(standingsTable.querySelectorAll("tr"));
+
+            statusEl.textContent = `Searching for ${userNamesToSearch.length} user(s)...`;
+
+            for (const row of rows) {
+                // Find participant cell (usually has 'participant' class or contains user link)
+                const participantCell = row.querySelector(
+                    "td.participant, td a[href*='/profile/']"
+                );
+                if (!participantCell) continue;
+
+                const userLink = participantCell.querySelector(
+                    "a[href*='/profile/']"
+                ) as HTMLAnchorElement;
+                if (!userLink) continue;
+
+                const displayName = userLink.textContent?.trim() || "";
+                const handle =
+                    userLink.href.split("/profile/")[1]?.trim() || "";
+
+                // Check if this user is in our search list
+                for (const searchName of userNamesToSearch) {
+                    if (
+                        handle.toLowerCase() === searchName ||
+                        displayName.toLowerCase() === searchName ||
+                        handle.toLowerCase().includes(searchName) ||
+                        displayName.toLowerCase().includes(searchName)
+                    ) {
+                        if (!foundUsers[searchName]) {
+                            foundUsers[searchName] = {
+                                page: 1,
+                                actualName: handle,
+                                profileUrl: userLink.href,
+                            };
+                            foundCount++;
+
+                            // Add to found users display
+                            const userDiv = document.createElement("div");
+                            userDiv.style.cssText = `
+                                padding: 10px;
+                                background: #d4edda;
+                                border: 1px solid #c3e6cb;
+                                border-radius: 8px;
+                                margin-bottom: 8px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                            `;
+                            userDiv.innerHTML = `
+                                <div>
+                                    <div style="font-weight: 600; font-size: 13px; color: #155724;">
+                                        ${handle}
+                                    </div>
+                                    <div style="font-size: 11px; color: #155724;">
+                                        ${
+                                            searchName !== handle.toLowerCase()
+                                                ? `Searched: ${searchName}`
+                                                : "Exact match"
+                                        }
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 6px;">
+                                    <a href="${userLink.href}" target="_blank" 
+                                       style="text-decoration: none; color: #155724; font-size: 16px;">🔗</a>
+                                    <button class="add-to-squad-btn" data-username="${handle}" 
+                                            style="background:#2CBB5D;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;">
+                                        + Squad
+                                    </button>
+                                </div>
+                            `;
+                            foundUsersEl.appendChild(userDiv);
+
+                            const addBtn = userDiv.querySelector(
+                                ".add-to-squad-btn"
+                            ) as HTMLButtonElement;
+                            if (addBtn) {
+                                addBtn.addEventListener("click", (e) => {
+                                    e.preventDefault();
+                                    addToSquad(handle, addBtn);
+                                });
+                            }
+
+                            statusEl.textContent = `Found ${foundCount}/${userNamesToSearch.length} user(s)`;
+                        }
+                    }
+                }
+            }
+
+            // Final status
+            if (foundCount === userNamesToSearch.length) {
+                statusEl.textContent = `🎉 All ${foundCount} user(s) found!`;
+                statusEl.style.color = "#2CBB5D";
+            } else {
+                const notFound = userNamesToSearch.filter(
+                    (name) => !foundUsers[name]
+                );
+                statusEl.innerHTML = `
+                    <div style="color: #2CBB5D;">✅ Found ${foundCount}/${
+                    userNamesToSearch.length
+                }</div>
+                    ${
+                        notFound.length > 0
+                            ? `<div style="color: #856404; font-size: 11px; margin-top: 4px;">Not found: ${notFound.join(
+                                  ", "
+                              )}</div>`
+                            : ""
+                    }
+                `;
+            }
+        } catch (error) {
+            statusEl.textContent =
+                "❌ Error searching: " + (error as Error).message;
+            statusEl.style.color = "#dc3545";
+        }
+    }
+
     window.addEventListener("load", () => {
         const savedState = sessionStorage.getItem("leetcodeSearchState");
         if (savedState) {
@@ -775,24 +986,55 @@ import type {
             sendResponse: (response: SearchResponse) => void
         ) => {
             if (request.action === "startSearch") {
-                if (
-                    !window.location.href.includes("/contest/") ||
-                    !window.location.href.includes("/ranking/")
-                ) {
-                    sendResponse({
-                        status: "error",
-                        message: "Not on a contest ranking page",
-                    });
-                    return;
-                }
+                const platform = detectPlatform();
 
-                try {
-                    findUsersInLeetCodeContest(request);
-                    sendResponse({ status: "started" });
-                } catch (error) {
+                if (platform === "leetcode") {
+                    if (
+                        !window.location.href.includes("/contest/") ||
+                        !window.location.href.includes("/ranking/")
+                    ) {
+                        sendResponse({
+                            status: "error",
+                            message: "Not on a LeetCode contest ranking page",
+                        });
+                        return;
+                    }
+
+                    try {
+                        findUsersInLeetCodeContest(request);
+                        sendResponse({ status: "started" });
+                    } catch (error) {
+                        sendResponse({
+                            status: "error",
+                            message: (error as Error).message,
+                        });
+                    }
+                } else if (platform === "codeforces") {
+                    if (
+                        !window.location.href.includes("/contest/") ||
+                        !window.location.href.includes("/standings")
+                    ) {
+                        sendResponse({
+                            status: "error",
+                            message:
+                                "Not on a Codeforces contest standings page",
+                        });
+                        return;
+                    }
+
+                    try {
+                        findUsersInCodeforcesContest(request);
+                        sendResponse({ status: "started" });
+                    } catch (error) {
+                        sendResponse({
+                            status: "error",
+                            message: (error as Error).message,
+                        });
+                    }
+                } else {
                     sendResponse({
                         status: "error",
-                        message: (error as Error).message,
+                        message: "Platform not supported",
                     });
                 }
             }

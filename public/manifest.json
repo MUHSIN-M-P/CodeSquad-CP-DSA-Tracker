@@ -1,16 +1,18 @@
 {
   "manifest_version": 3,
   "name": "CodeSquad Tracker",
-  "description": "Track contest rankings, manage your LeetCode squad, and compete with friends",
-  "version": "2.0",
+  "description": "Track LeetCode & Codeforces contest rankings, manage your squad, and compete with friends across platforms",
+  "version": "2.5",
   "permissions": ["scripting", "activeTab", "storage"],
   "host_permissions": [
-    "https://leetcode.com/*"
+    "https://leetcode.com/*",
+    "https://codeforces.com/*"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://leetcode.com/contest/*/ranking/*"
+        "https://leetcode.com/contest/*/ranking/*",
+        "https://codeforces.com/contest/*/standings*"
       ],
       "js": ["content.js"]
     }
