@@ -1,14 +1,15 @@
 import React from "react";
 
 interface TabBarProps {
-    activeTab: "search" | "squad";
-    onTabChange: (tab: "search" | "squad") => void;
+    activeTab: "search" | "squad" | "contests";
+    onTabChange: (tab: "search" | "squad" | "contests") => void;
 }
 
 const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabChange }) => {
     const tabs = [
-        { id: "search" as const, label: "🔍 Search" },
         { id: "squad" as const, label: "👥 Squad" },
+        { id: "contests" as const, label: "🏆 Contests" },
+        { id: "search" as const, label: "🔍 Search" },
     ];
 
     return (
@@ -60,12 +61,17 @@ const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabChange }) => {
                 style={{
                     position: "absolute",
                     bottom: "-1px",
-                    left: activeTab === "search" ? "0%" : "50%",
+                    left:
+                        activeTab === "squad"
+                            ? "0%"
+                            : activeTab === "contests"
+                            ? "33.33%"
+                            : "66.67%",
                     height: "3px",
                     background: "var(--primary)",
                     borderRadius: "var(--radius) var(--radius) 0 0",
                     transition: "left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                    width: "50%",
+                    width: "33.33%",
                 }}
             />
         </div>

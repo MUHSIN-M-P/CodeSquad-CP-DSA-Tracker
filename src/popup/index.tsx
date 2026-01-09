@@ -5,12 +5,13 @@ import Header from "../components/Header";
 import TabBar from "../components/TabBar";
 import SearchTab from "../components/SearchTab";
 import SquadTab from "../components/SquadTab";
+import ContestTab from "../components/ContestTab";
 import ErrorBox from "../components/ErrorBox";
 
-type TabType = "search" | "squad";
+type TabType = "search" | "squad" | "contests";
 
 function Popup() {
-    const [activeTab, setActiveTab] = useState<TabType>("search");
+    const [activeTab, setActiveTab] = useState<TabType>("squad");
     const [error, setError] = useState<string>("");
 
     const showError = (msg: string) => {
@@ -28,10 +29,13 @@ function Popup() {
             <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
             <ErrorBox message={error} />
             <div style={{ padding: "20px" }}>
+                {activeTab === "squad" && <SquadTab showError={showError} />}
+                {activeTab === "contests" && (
+                    <ContestTab showError={showError} />
+                )}
                 {activeTab === "search" && (
                     <SearchTab showError={showError} clearError={clearError} />
                 )}
-                {activeTab === "squad" && <SquadTab showError={showError} />}
             </div>
         </div>
     );

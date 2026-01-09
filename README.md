@@ -1,14 +1,70 @@
-# CodeSquad Tracker í¿†
+# CodeSquad Tracker ï¿½ï¿½ï¿½
 
-**Track LeetCode contest rankings, build your coding squad, and compete with friends!**
+**Track LeetCode & Codeforces contest rankings, build your coding squad, and compete with friends!**
 
-CodeSquad Tracker is a Chrome extension built with **React + Vite + TypeScript** that enhances your LeetCode competitive programming experience by allowing you to search for users in contest rankings, manage a squad of friends, and track performance with a leaderboard.
+CodeSquad Tracker is a Chrome extension built with **React + Vite + TypeScript** that enhances your competitive programming experience by allowing you to search for users in contest rankings, manage a squad of friends, track upcoming contests, and access daily coding challenges.
+
+---
+
+## ğŸ“¸ Screenshots
+
+> **Note:** Place your screenshots in a `screenshots/` folder in the project root.
+
+### Main Features
+![Squad Tab](screenshots/squad-tab.png)
+![Contests Tab](screenshots/contests-tab.png)
+![Search Tab](screenshots/search-tab.png)
+![Dark Theme](screenshots/dark-theme.png)
 
 ---
 
 ## âœ¨ Features
 
-### í´ **Smart Contest Search**
+### ğŸ¯ **Upcoming Contests (NEW!)**
+
+-   View upcoming contests from **LeetCode** and **Codeforces**
+-   Real-time countdown timers (updates every second)
+-   Filter contests within the next **7 days**
+-   Platform badges with color coding
+-   Direct links to **Problem of the Day**:
+    -   ğŸ’» LeetCode Daily Challenge
+    -   ğŸ“š GeeksforGeeks Problem of the Day
+
+### ğŸŒ“ **Theme Toggle (NEW!)**
+
+-   Switch between light and dark modes
+-   Persistent theme selection (saved to localStorage)
+-   Respects system preference on first load
+-   Smooth color transitions
+
+### ğŸ” **Smart Contest Search**
+
+-   Search for specific usernames within LeetCode & Codeforces contest rankings
+-   Define custom rank ranges to narrow your search
+-   Fuzzy matching to find similar usernames
+-   Direct links to user profiles
+-   Add found users directly to your squad
+
+### ğŸ‘¥ **Squad Management**
+
+-   Build and manage your coding squad
+-   Add friends by username with validation (LeetCode & Codeforces)
+-   Quick access to friend profiles
+-   Visual friend list with avatars
+-   Real-time stats tracking
+
+### ğŸ† **Performance Leaderboard**
+
+-   Track total problems solved by difficulty (Easy/Medium/Hard)
+-   See rankings among your squad members
+-   Medal system for top performers (ğŸ¥‡ğŸ¥ˆğŸ¥‰)
+-   Real-time stats via LeetCode & Codeforces APIs
+
+---
+
+## âœ¨ Features
+
+### ï¿½ï¿½ï¿½ **Smart Contest Search**
 
 -   Search for specific usernames within LeetCode contest rankings
 -   Define custom rank ranges to narrow your search
@@ -16,23 +72,23 @@ CodeSquad Tracker is a Chrome extension built with **React + Vite + TypeScript**
 -   Direct links to user profiles
 -   **NEW:** Add found users directly to your squad!
 
-### í±¥ **Squad Management**
+### ï¿½ï¿½ï¿½ **Squad Management**
 
 -   Build and manage your coding squad
 -   Add friends by username with validation
 -   Quick access to friend profiles
 -   Visual friend list with avatars
 
-### í¿† **Performance Leaderboard**
+### ï¿½ï¿½ï¿½ **Performance Leaderboard**
 
 -   Track total problems solved by difficulty (Easy/Medium/Hard)
 -   See rankings among your squad members
--   Medal system for top performers (íµ‡íµˆíµ‰)
+-   Medal system for top performers (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
 -   Real-time stats via LeetCode's GraphQL API
 
 ---
 
-## í» ï¸ Tech Stack
+## ï¿½ï¿½ï¿½ï¸ Tech Stack
 
 - **React 19** - UI framework
 - **TypeScript** - Type safety
@@ -42,7 +98,7 @@ CodeSquad Tracker is a Chrome extension built with **React + Vite + TypeScript**
 
 ---
 
-## í³ Project Structure
+## ï¿½ï¿½ï¿½ Project Structure
 
 ```
 CodeSquad-CP-DSA-Tracker/
@@ -75,7 +131,7 @@ CodeSquad-CP-DSA-Tracker/
 
 ---
 
-## í³¥ Installation
+## ï¿½ï¿½ï¿½ Installation
 
 ### Development Setup
 
@@ -109,7 +165,7 @@ The built extension will be in the `dist/` folder.
 
 ---
 
-## í·  How to Use
+## ï¿½ï¿½ï¿½ How to Use
 
 ### Searching for Users
 
@@ -121,7 +177,7 @@ The built extension will be in the `dist/` folder.
 2. Click the extension icon in your toolbar
 3. Go to **"Search"** tab
 4. Enter usernames (comma-separated)
-   íº¨ Use usernames as shown in ranking, not UserIds
+   ï¿½ï¿½ï¿½ Use usernames as shown in ranking, not UserIds
 5. Set rank range (optional)
 6. Click **"Start Search"**
 
@@ -141,7 +197,7 @@ The extension will:
 
 ---
 
-## íº€ Development
+## ï¿½ï¿½ï¿½ Development
 
 ### Prerequisites
 
@@ -165,7 +221,7 @@ The extension will:
 
 ---
 
-## í´Œ API Integration
+## ï¿½ï¿½ï¿½ API Integration
 
 The extension uses LeetCode's GraphQL API to fetch:
 - User profiles and stats
@@ -180,13 +236,14 @@ See `src/utils/leetcode-api.ts` for API implementation.
 ## âš ï¸ Limitations
 
 -   Uses **unofficial** LeetCode GraphQL API (may break with changes)
+-   Codeforces API has rate limiting
 -   Leaderboard shows all-time stats (not contest-specific)
 -   Rate limiting may apply with many friends
--   Requires internet connection for GraphQL queries
+-   Requires internet connection for API queries
 
 ---
 
-## í´ Contributing
+## ï¿½ï¿½ï¿½ Contributing
 
 Feel free to submit issues or pull requests to improve CodeSquad Tracker!
 
@@ -198,18 +255,35 @@ Feel free to submit issues or pull requests to improve CodeSquad Tracker!
 
 ---
 
-## í³„ License
+## ï¿½ï¿½ï¿½ License
 
 MIT
 
 ---
 
-## í±¤ Author
+## ï¿½ï¿½ï¿½ Author
 
 **MUHSIN-M-P**
 
 ---
 
-## í³ Version
+## ï¿½ï¿½ï¿½ Version
 
-2.0.0 - React + Vite Edition
+**3.0.0 - Enhanced Edition**
+- âœ¨ Added Contests tab with LeetCode & Codeforces integration
+- ğŸ“ Added Problem of the Day quick links
+- ğŸŒ“ Theme toggle (light/dark mode)
+- ğŸ¨ Improved UI with better color schemes
+- â±ï¸ Real-time contest countdowns
+
+---
+
+## ğŸ“§ Contact & Support
+
+- **Issues**: [GitHub Issues](https://github.com/MUHSIN-M-P/CodeSquad-CP-DSA-Tracker/issues)
+- **Email**: Add your support email
+- **Twitter**: Add your Twitter handle
+
+---
+
+Made with â¤ï¸ by competitive programmers, for competitive programmers!
