@@ -1,4 +1,4 @@
-# CodeSquad Tracker ���
+# CodeSquad Tracker 
 
 **Track LeetCode & Codeforces contest rankings, build your coding squad, and compete with friends!**
 
