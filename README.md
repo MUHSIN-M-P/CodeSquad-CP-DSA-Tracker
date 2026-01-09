@@ -7,12 +7,10 @@ CodeSquad Tracker is a Chrome extension built with **React + Vite + TypeScript**
 ---
 
 ## 📸 Screenshots
-
-> **Note:** Place your screenshots in a `screenshots/` folder in the project root.
-
-### Main Features
-<img width="547" height="762" alt="Screenshot 2026-01-09 153616" src="https://github.com/user-attachments/assets/e236b4a6-dd2f-40b7-a93f-5f1ec880299a" />
-<img width="536" height="689" alt="image" src="https://github.com/user-attachments/assets/3053a22f-78ed-4007-8e01-2e1c07134234" />
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/e236b4a6-dd2f-40b7-a93f-5f1ec880299a" alt="Screenshot 1" width="30%" style="border-radius: 8px; border: 1px solid #ccc; margin-right: 10px;">
+  <img src="https://github.com/user-attachments/assets/3053a22f-78ed-4007-8e01-2e1c07134234" alt="Screenshot 2" width="30%" style="border-radius: 8px; border: 1px solid #ccc;">
+</div>
 
 ---
 
