@@ -18,6 +18,8 @@ export interface UserStats {
     todayCount?: number; // Number of problems solved today
     cachedAt?: number; // Timestamp when data was cached
     lastFetched?: number; // Timestamp of last successful fetch
+    yesterdayTotal?: number; // Yesterday's total for privacy fallback comparison
+    yesterdayDate?: number; // Date (midnight timestamp) of the stored yesterday data
 }
 
 export interface FoundUser {
@@ -122,6 +124,9 @@ export interface CodeforcesUserStatus {
 }
 
 export interface Friend {
+    id?: string; // Unique ID for merged members
     username: string;
     platform: Platform;
+    displayName?: string; // Custom display name set by user
+    mergedWith?: Friend[]; // Additional platform accounts for same person
 }

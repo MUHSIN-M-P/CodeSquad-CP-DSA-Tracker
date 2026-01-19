@@ -1,4 +1,4 @@
-# CodeSquad Tracker ���
+# CodeSquad Tracker 
 
 **Track LeetCode & Codeforces contest rankings, build your coding squad, and compete with friends!**
 
@@ -7,88 +7,60 @@ CodeSquad Tracker is a Chrome extension built with **React + Vite + TypeScript**
 ---
 
 ## 📸 Screenshots
-
-> **Note:** Place your screenshots in a `screenshots/` folder in the project root.
-
-### Main Features
-![Squad Tab](screenshots/squad-tab.png)
-![Contests Tab](screenshots/contests-tab.png)
-![Search Tab](screenshots/search-tab.png)
-![Dark Theme](screenshots/dark-theme.png)
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/e236b4a6-dd2f-40b7-a93f-5f1ec880299a" alt="Screenshot 1" width="30%" style="border-radius: 8px; border: 1px solid #ccc; margin-right: 10px;">
+  <img src="https://github.com/user-attachments/assets/3053a22f-78ed-4007-8e01-2e1c07134234" alt="Screenshot 2" width="30%" style="border-radius: 8px; border: 1px solid #ccc;">
+</div>
 
 ---
 
 ## ✨ Features
+### 🚀 **Multi-Platform Support (NEW!)**
+- Track users from both **LeetCode** and **Codeforces**
+- Combined leaderboards and stats
+- Platform-specific badges and colors
+- View Codeforces ratings and ranks (Expert, Master, etc.)
 
-### 🎯 **Upcoming Contests (NEW!)**
+### 🖱️ **Drag-and-Drop Merging (NEW!)**
+- **Merge Accounts:** Drag one profile onto another to link them (e.g., merge "userLC" with "userCF")
+- See combined stats for the same person across platforms
+- Split profiles easily with a single click
+- Intuitive drag-and-drop interface with visual cues
 
--   View upcoming contests from **LeetCode** and **Codeforces**
--   Real-time countdown timers (updates every second)
--   Filter contests within the next **7 days**
--   Platform badges with color coding
--   Direct links to **Problem of the Day**:
-    -   💻 LeetCode Daily Challenge
-    -   📚 GeeksforGeeks Problem of the Day
+### 🎯 **Upcoming Contests**
+- View upcoming contests from **LeetCode** and **Codeforces**
+- Real-time countdown timers (updates every second)
+- Filter contests within the next **7 days**
+- **Problem of the Day** links for LeetCode & GeeksforGeeks
 
-### 🌓 **Theme Toggle (NEW!)**
-
--   Switch between light and dark modes
--   Persistent theme selection (saved to localStorage)
--   Respects system preference on first load
--   Smooth color transitions
+### 🌓 **Theme Toggle**
+- Switch between light and dark modes
+- Persistent theme selection (synced with Chrome storage)
+- Respects system preference on first load
+- Smooth color transitions
 
 ### 🔍 **Smart Contest Search**
-
--   Search for specific usernames within LeetCode & Codeforces contest rankings
--   Define custom rank ranges to narrow your search
--   Fuzzy matching to find similar usernames
--   Direct links to user profiles
--   Add found users directly to your squad
+- Search for specific usernames within LeetCode & Codeforces contest rankings
+- Define custom rank ranges to narrow your search
+- Fuzzy matching to find similar usernames
+- Add found users directly to your squad
 
 ### 👥 **Squad Management**
-
--   Build and manage your coding squad
--   Add friends by username with validation (LeetCode & Codeforces)
--   Quick access to friend profiles
--   Visual friend list with avatars
--   Real-time stats tracking
+- Build and manage your coding squad
+- **Privacy Fallback:** Tracking works even if a user has hidden LeetCode submissions (tracks total count changes)
+- Edit display names (double-click to rename)
+- Visual friend list with avatars from both platforms
+- Real-time stats tracking
 
 ### 🏆 **Performance Leaderboard**
-
--   Track total problems solved by difficulty (Easy/Medium/Hard)
--   See rankings among your squad members
--   Medal system for top performers (🥇🥈🥉)
--   Real-time stats via LeetCode & Codeforces APIs
-
----
-
-## ✨ Features
-
-### ��� **Smart Contest Search**
-
--   Search for specific usernames within LeetCode contest rankings
--   Define custom rank ranges to narrow your search
--   Fuzzy matching to find similar usernames
--   Direct links to user profiles
--   **NEW:** Add found users directly to your squad!
-
-### ��� **Squad Management**
-
--   Build and manage your coding squad
--   Add friends by username with validation
--   Quick access to friend profiles
--   Visual friend list with avatars
-
-### ��� **Performance Leaderboard**
-
--   Track total problems solved by difficulty (Easy/Medium/Hard)
--   See rankings among your squad members
--   Medal system for top performers (���������)
--   Real-time stats via LeetCode's GraphQL API
+- Track total problems solved by difficulty (Easy/Medium/Hard for LeetCode)
+- See rankings among your squad members
+- Medal system for top performers (🥇🥈🥉)
+- Shows solved count for today (with "✓ LC" or "✓ CF" indicators)
 
 ---
 
-## ���️ Tech Stack
+##Tech Stack
 
 - **React 19** - UI framework
 - **TypeScript** - Type safety
@@ -98,7 +70,7 @@ CodeSquad Tracker is a Chrome extension built with **React + Vite + TypeScript**
 
 ---
 
-## ��� Project Structure
+## Project Structure
 
 ```
 CodeSquad-CP-DSA-Tracker/
@@ -131,7 +103,7 @@ CodeSquad-CP-DSA-Tracker/
 
 ---
 
-## ��� Installation
+##  Installation
 
 ### Development Setup
 
@@ -165,63 +137,7 @@ The built extension will be in the `dist/` folder.
 
 ---
 
-## ��� How to Use
-
-### Searching for Users
-
-1. Navigate to a LeetCode contest ranking page:
-   ```
-   https://leetcode.com/contest/weekly-contest-XXX/ranking/1/
-   ```
-
-2. Click the extension icon in your toolbar
-3. Go to **"Search"** tab
-4. Enter usernames (comma-separated)
-   ��� Use usernames as shown in ranking, not UserIds
-5. Set rank range (optional)
-6. Click **"Start Search"**
-
-The extension will:
-- Navigate through pages automatically
-- Use fuzzy matching to find similar usernames
-- Display results with profile links
-- Allow adding found users to your squad
-
-### Managing Your Squad
-
-1. Click the extension icon
-2. Go to **"Squad"** tab
-3. Enter a LeetCode username
-4. Click **"+"** to add to squad
-5. View rankings sorted by total problems solved
-
----
-
-## ��� Development
-
-### Prerequisites
-
-- Node.js (v18 or higher)
-- npm or yarn
-
-### Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run build:extension` - Build extension and copy manifest
-- `npm run lint` - Run ESLint
-- `npm run preview` - Preview production build
-
-### Development Workflow
-
-1. Make changes to source files in `src/`
-2. Run `npm run dev` to see changes in development mode
-3. Run `npm run build:extension` to create production build
-4. Load/reload the `dist/` folder in Chrome extensions
-
----
-
-## ��� API Integration
+## API Integration
 
 The extension uses LeetCode's GraphQL API to fetch:
 - User profiles and stats
@@ -243,7 +159,7 @@ See `src/utils/leetcode-api.ts` for API implementation.
 
 ---
 
-## ��� Contributing
+## Contributing
 
 Feel free to submit issues or pull requests to improve CodeSquad Tracker!
 
@@ -252,37 +168,6 @@ Feel free to submit issues or pull requests to improve CodeSquad Tracker!
 3. Make your changes
 4. Test the extension
 5. Submit a pull request
-
----
-
-## ��� License
-
-MIT
-
----
-
-## ��� Author
-
-**MUHSIN-M-P**
-
----
-
-## ��� Version
-
-**3.0.0 - Enhanced Edition**
-- ✨ Added Contests tab with LeetCode & Codeforces integration
-- 📝 Added Problem of the Day quick links
-- 🌓 Theme toggle (light/dark mode)
-- 🎨 Improved UI with better color schemes
-- ⏱️ Real-time contest countdowns
-
----
-
-## 📧 Contact & Support
-
-- **Issues**: [GitHub Issues](https://github.com/MUHSIN-M-P/CodeSquad-CP-DSA-Tracker/issues)
-- **Email**: Add your support email
-- **Twitter**: Add your Twitter handle
 
 ---
 

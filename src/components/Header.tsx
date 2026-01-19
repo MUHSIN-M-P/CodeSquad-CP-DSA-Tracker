@@ -4,26 +4,28 @@ const Header: React.FC = () => {
     const [theme, setTheme] = useState<"light" | "dark">("light");
 
     useEffect(() => {
-        const saved = localStorage.getItem("theme") as "light" | "dark" | null;
-        if (saved) {
-            setTheme(saved);
-            if (saved === "dark") {
-                document.documentElement.classList.add("theme-dark");
+        // Use chrome.storage.local instead of localStorage for extension context
+        chrome.storage.local.get({ theme: null }, (result) => {
+            if (result.theme) {
+                setTheme(result.theme);
+                if (result.theme === "dark") {
+                    document.documentElement.classList.add("theme-dark");
+                } else {
+                    document.documentElement.classList.remove("theme-dark");
+                }
             } else {
-                document.documentElement.classList.remove("theme-dark");
+                const prefersDark =
+                    window.matchMedia &&
+                    window.matchMedia("(prefers-color-scheme: dark)").matches;
+                const initial = prefersDark ? "dark" : "light";
+                setTheme(initial);
+                if (initial === "dark") {
+                    document.documentElement.classList.add("theme-dark");
+                } else {
+                    document.documentElement.classList.remove("theme-dark");
+                }
             }
-        } else {
-            const prefersDark =
-                window.matchMedia &&
-                window.matchMedia("(prefers-color-scheme: dark)").matches;
-            const initial = prefersDark ? "dark" : "light";
-            setTheme(initial);
-            if (initial === "dark") {
-                document.documentElement.classList.add("theme-dark");
-            } else {
-                document.documentElement.classList.remove("theme-dark");
-            }
-        }
+        });
     }, []);
 
     const toggleTheme = () => {
@@ -34,7 +36,7 @@ const Header: React.FC = () => {
         } else {
             document.documentElement.classList.remove("theme-dark");
         }
-        localStorage.setItem("theme", next);
+        chrome.storage.local.set({ theme: next });
     };
 
     return (

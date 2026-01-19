@@ -39,11 +39,13 @@ async function fetchWithRetry(
 ): Promise<Response> {
     for (let i = 0; i < maxRetries; i++) {
         try {
-            await delay(Math.pow(2, i) * 1000); // 1s, 2s, 4s
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+            if (i > 0) {
+                await delay(Math.pow(2, i) * 1000); // 1s, 2s, 4s
             }
+            const response = await fetch(url);
+
+            // Return the response as-is; callers decide how to handle non-OK.
+            // This avoids throwing noisy `HTTP 400` errors for bad handles.
             return response;
         } catch (error) {
             if (i === maxRetries - 1) throw error;
@@ -55,15 +57,24 @@ async function fetchWithRetry(
 
 export async function verifyCodeforcesUser(handle: string): Promise<boolean> {
     try {
+        const safeHandle = encodeURIComponent(handle.trim());
+        if (!safeHandle) return false;
+
         const response = await fetchWithRetry(
-            `${CF_API_ENDPOINT}/user.info?handles=${handle}`,
+            `${CF_API_ENDPOINT}/user.info?handles=${safeHandle}`,
             2
         );
+
+        if (!response.ok || response.status === 400) {
+            return false;
+        }
 
         const result = await safeJsonParse(response);
         return result.status === "OK" && result.result.length > 0;
     } catch (error) {
-        console.error("Error verifying Codeforces user:", error);
+        if (error instanceof Error && !error.message.includes("HTTP 400")) {
+            console.error("Error verifying Codeforces user:", error);
+        }
         return false;
     }
 }
@@ -72,51 +83,98 @@ export async function getCodeforcesUserStats(
     handle: string
 ): Promise<UserStats | null> {
     try {
+        const safeHandle = encodeURIComponent(handle.trim());
+        if (!safeHandle) return null;
+
+        const PAGE_SIZE = 10000;
+        const MAX_PAGES = 10; // safety cap to avoid excessive requests
+
         // Fetch sequentially to avoid rate limiting
         const userResponse = await fetchWithRetry(
-            `${CF_API_ENDPOINT}/user.info?handles=${handle}`
+            `${CF_API_ENDPOINT}/user.info?handles=${safeHandle}`,
+            2
         );
+
+        if (!userResponse.ok) {
+            return null;
+        }
+
         const userData = await safeJsonParse(userResponse);
-
-        await delay(1000); // Wait between requests
-
-        const submissionsResponse = await fetchWithRetry(
-            `${CF_API_ENDPOINT}/user.status?handle=${handle}&from=1&count=10000`
-        );
-        const submissionsData = await safeJsonParse(submissionsResponse);
 
         if (userData.status !== "OK" || userData.result.length === 0) {
             return null;
         }
 
+        await delay(1000); // Wait between requests
+
         const user: CodeforcesUser = userData.result[0];
 
-        // Count unique solved problems
+        // Count unique solved problems across *all* submissions by paging.
+        // Codeforces limits `count` to 10000 per request, so users with >10k submissions
+        // need multiple pages to get an accurate total.
         const solvedProblems = new Set<string>();
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
         const todayTimestamp = Math.floor(todayStart.getTime() / 1000);
         const todayProblems = new Set<string>();
 
-        if (submissionsData.status === "OK") {
-            submissionsData.result
-                .filter((sub: CodeforcesSubmission) => sub.verdict === "OK")
-                .forEach((sub: CodeforcesSubmission) => {
-                    const problemKey = `${sub.problem.contestId}-${sub.problem.index}`;
-                    solvedProblems.add(problemKey);
+        let from = 1;
+        for (let page = 0; page < MAX_PAGES; page++) {
+            const submissionsResponse = await fetchWithRetry(
+                `${CF_API_ENDPOINT}/user.status?handle=${safeHandle}&from=${from}&count=${PAGE_SIZE}`,
+                2
+            );
 
-                    // Check if solved today
-                    if (sub.creationTimeSeconds >= todayTimestamp) {
-                        todayProblems.add(problemKey);
-                    }
-                });
+            if (!submissionsResponse.ok) {
+                break;
+            }
+
+            const submissionsData = await safeJsonParse(submissionsResponse);
+            if (
+                submissionsData.status !== "OK" ||
+                !Array.isArray(submissionsData.result)
+            ) {
+                break;
+            }
+
+            const accepted = (
+                submissionsData.result as CodeforcesSubmission[]
+            ).filter((sub) => sub.verdict === "OK");
+
+            accepted.forEach((sub) => {
+                // Build a robust problem key that works for all problem types
+                // Some problems use contestId, others use problemsetName
+                const problem = sub.problem as any;
+                const contestId = problem?.contestId ?? (sub as any)?.contestId;
+                const problemsetName = problem?.problemsetName;
+                const index = problem?.index ?? "unknown";
+                const name = problem?.name ?? "";
+
+                // Use contestId if available, otherwise problemsetName, with name as additional disambiguator
+                const prefix = contestId ?? problemsetName ?? "unknown";
+                const problemKey = `${prefix}-${index}-${name}`;
+                solvedProblems.add(problemKey);
+
+                // Today's solves will be in the most recent page.
+                if (page === 0 && sub.creationTimeSeconds >= todayTimestamp) {
+                    todayProblems.add(problemKey);
+                }
+            });
+
+            if (submissionsData.result.length < PAGE_SIZE) {
+                break;
+            }
+
+            from += PAGE_SIZE;
+            await delay(750);
         }
 
         const solvedToday = todayProblems.size > 0;
         const todayCount = todayProblems.size;
 
         return {
-            username: user.handle,
+            // Keep the originally requested handle so we can match back to `Friend.username`
+            username: handle.trim(),
             platform: "codeforces" as const,
             avatar:
                 user.titlePhoto ||
@@ -130,7 +188,10 @@ export async function getCodeforcesUserStats(
             todayCount,
         };
     } catch (error) {
-        console.error("Error fetching Codeforces user stats:", error);
+        // Don't log HTTP 400 errors (user doesn't exist)
+        if (error instanceof Error && !error.message.includes("HTTP 400")) {
+            console.error("Error fetching Codeforces user stats:", error);
+        }
         return null;
     }
 }
@@ -140,9 +201,16 @@ export async function getCodeforcesRecentSubmissions(
     count: number = 20
 ): Promise<Submission[]> {
     try {
+        const safeHandle = encodeURIComponent(handle.trim());
+        if (!safeHandle) return [];
+
         const response = await fetchWithRetry(
-            `${CF_API_ENDPOINT}/user.status?handle=${handle}&from=1&count=${count}`
+            `${CF_API_ENDPOINT}/user.status?handle=${safeHandle}&from=1&count=${count}`
         );
+
+        if (!response.ok || response.status === 400) {
+            return [];
+        }
 
         const result = await safeJsonParse(response);
 
@@ -160,7 +228,9 @@ export async function getCodeforcesRecentSubmissions(
                 username: handle,
             }));
     } catch (error) {
-        console.error("Error fetching Codeforces submissions:", error);
+        if (error instanceof Error && !error.message.includes("HTTP 400")) {
+            console.error("Error fetching Codeforces submissions:", error);
+        }
         return [];
     }
 }
@@ -169,10 +239,13 @@ export async function getCodeforcesUserRating(
     handle: string
 ): Promise<number | null> {
     try {
+        const safeHandle = encodeURIComponent(handle.trim());
+        if (!safeHandle) return null;
+
         await delay(500); // Add delay to avoid rate limiting
 
         const response = await fetch(
-            `${CF_API_ENDPOINT}/user.info?handles=${handle}`
+            `${CF_API_ENDPOINT}/user.info?handles=${safeHandle}`
         );
 
         if (!response.ok) {
@@ -186,7 +259,9 @@ export async function getCodeforcesUserRating(
         }
         return null;
     } catch (error) {
-        console.error("Error fetching Codeforces rating:", error);
+        if (error instanceof Error && !error.message.includes("HTTP 400")) {
+            console.error("Error fetching Codeforces rating:", error);
+        }
         return null;
     }
 }
